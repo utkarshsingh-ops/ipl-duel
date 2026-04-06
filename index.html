@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IPL Duel</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0a0a1a;
+      --card: #12122a;
+      --border: #ffffff18;
+      --text: #f0f0ff;
+      --muted: #888aaa;
+      --accent: #f4c430;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    header h1 {
+      font-size: clamp(2rem, 6vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #f4c430, #ff6b2b);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    header p {
+      color: var(--muted);
+      margin-top: 6px;
+      font-size: 0.95rem;
+    }
+
+    .arena {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 16px;
+      width: 100%;
+      max-width: 900px;
+      align-items: start;
+    }
+
+    .side h2 {
+      text-align: center;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .team-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+      user-select: none;
+    }
+
+    .team-card:hover {
+      transform: translateY(-3px);
+      border-color: #ffffff44;
+    }
+
+    .team-card.selected {
+      border-color: var(--team-color, var(--accent));
+      box-shadow: 0 0 20px var(--team-glow, #f4c43044);
+      transform: translateY(-3px);
+    }
+
+    .team-card .logo {
+      font-size: 2rem;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .team-card .name {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .team-card .abbr {
+      font-size: 1rem;
+      font-weight: 900;
+      display: block;
+      margin-bottom: 2px;
+    }
+
+    .vs-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 36px;
+      gap: 16px;
+    }
+
+    .vs-badge {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--accent);
+      text-shadow: 0 0 20px #f4c43066;
+    }
+
+    #duel-btn {
+      background: linear-gradient(135deg, #f4c430, #ff6b2b);
+      border: none;
+      border-radius: 12px;
+      color: #0a0a1a;
+      font-size: 0.85rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      padding: 12px 20px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    #duel-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #duel-btn:not(:disabled):hover {
+      transform: scale(1.05);
+    }
+
+    /* Result section */
+    #result {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 36px;
+      display: none;
+    }
+
+    #result.show { display: block; }
+
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+    }
+
+    .matchup {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 28px;
+      flex-wrap: wrap;
+    }
+
+    .fighter {
+      text-align: center;
+      position: relative;
+    }
+
+    .fighter .big-logo {
+      font-size: 4rem;
+      display: block;
+      margin-bottom: 8px;
+      transition: transform 0.3s;
+    }
+
+    .fighter.winner .big-logo {
+      animation: bounce 0.6s ease infinite alternate;
+      filter: drop-shadow(0 0 12px var(--team-color));
+    }
+
+    .fighter.loser .big-logo {
+      opacity: 0.4;
+      filter: grayscale(1);
+    }
+
+    .fighter .fname {
+      font-weight: 900;
+      font-size: 1.1rem;
+    }
+
+    .fighter .ftag {
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .winner-crown {
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 1.8rem;
+      animation: spin-drop 0.5s ease forwards;
+    }
+
+    @keyframes bounce {
+      from { transform: translateY(0); }
+      to   { transform: translateY(-10px); }
+    }
+
+    @keyframes spin-drop {
+      from { transform: translateX(-50%) rotate(-90deg) translateY(-20px); opacity: 0; }
+      to   { transform: translateX(-50%) rotate(0deg) translateY(0); opacity: 1; }
+    }
+
+    .vs-text {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--muted);
+    }
+
+    .headline {
+      font-size: clamp(1.2rem, 3vw, 1.8rem);
+      font-weight: 900;
+      margin-bottom: 6px;
+    }
+
+    .subline {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+
+    .stat-box {
+      background: #0a0a1a;
+      border-radius: 12px;
+      padding: 14px 8px;
+    }
+
+    .stat-box .val {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: var(--accent);
+      display: block;
+    }
+
+    .stat-box .label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .progress-bars { margin-bottom: 24px; }
+
+    .pb-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 80px;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .pb-row .pb-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+    }
+
+    .pb-track {
+      height: 8px;
+      background: #0a0a1a;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .pb-fill-left, .pb-fill-right {
+      position: absolute;
+      top: 0;
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.8s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .pb-fill-left  { left: 0; }
+    .pb-fill-right { right: 0; }
+
+    .pb-val {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    #replay-btn {
+      background: transparent;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      padding: 10px 24px;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #replay-btn:hover {
+      background: var(--accent);
+      color: #0a0a1a;
+    }
+
+    /* Explosion animation on duel */
+    .shake { animation: shake 0.4s ease; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%       { transform: translateX(-6px); }
+      40%       { transform: translateX(6px); }
+      60%       { transform: translateX(-4px); }
+      80%       { transform: translateX(4px); }
+    }
+
+    @media (max-width: 600px) {
+      .arena { grid-template-columns: 1fr; }
+      .vs-column { flex-direction: row; padding-top: 0; }
+      .stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ IPL Duel</h1>
+  <p>Pick your warriors. Let them battle.</p>
+</header>
+
+<div class="arena">
+  <!-- Team 1 -->
+  <div class="side" id="side1">
+    <h2>Team 1</h2>
+    <div class="team-grid" id="grid1"></div>
+  </div>
+
+  <!-- VS -->
+  <div class="vs-column">
+    <div class="vs-badge">VS</div>
+    <button id="duel-btn" disabled>⚡ DUEL!</button>
+  </div>
+
+  <!-- Team 2 -->
+  <div class="side" id="side2">
+    <h2>Team 2</h2>
+    <div class="team-grid" id="grid2"></div>
+  </div>
+</div>
+
+<!-- Result -->
+<div id="result">
+  <div class="result-card" id="result-card">
+    <div class="matchup" id="matchup"></div>
+    <div class="headline" id="headline"></div>
+    <div class="subline"  id="subline"></div>
+    <div class="stats-row" id="stats-row"></div>
+    <div class="progress-bars" id="progress-bars"></div>
+    <button id="replay-btn">↩ Play Again</button>
+  </div>
+</div>
+
+<script>
+const TEAMS = [
+  { id:'mi',   name:'Mumbai Indians',         abbr:'MI',   logo:'🔵', color:'#1e90ff', glow:'#1e90ff44',
+    titles:5, winRate:56, avgScore:172, fanBase:98, founded:2008 },
+  { id:'csk',  name:'Chennai Super Kings',    abbr:'CSK',  logo:'🟡', color:'#ffd700', glow:'#ffd70044',
+    titles:5, winRate:59, avgScore:168, fanBase:97, founded:2008 },
+  { id:'rcb',  name:'Royal Challengers',      abbr:'RCB',  logo:'🔴', color:'#cc0000', glow:'#cc000044',
+    titles:0, winRate:46, avgScore:175, fanBase:95, founded:2008 },
+  { id:'kkr',  name:'Kolkata Knight Riders',  abbr:'KKR',  logo:'🟣', color:'#7b2fbe', glow:'#7b2fbe44',
+    titles:3, winRate:50, avgScore:163, fanBase:90, founded:2008 },
+  { id:'dc',   name:'Delhi Capitals',         abbr:'DC',   logo:'🔷', color:'#004c97', glow:'#004c9744',
+    titles:0, winRate:48, avgScore:164, fanBase:82, founded:2008 },
+  { id:'pbks', name:'Punjab Kings',           abbr:'PBKS', logo:'❤️', color:'#aa0000', glow:'#aa000044',
+    titles:0, winRate:46, avgScore:170, fanBase:80, founded:2008 },
+  { id:'rr',   name:'Rajasthan Royals',       abbr:'RR',   logo:'🩷', color:'#e91e8c', glow:'#e91e8c44',
+    titles:2, winRate:49, avgScore:162, fanBase:83, founded:2008 },
+  { id:'srh',  name:'Sunrisers Hyderabad',    abbr:'SRH',  logo:'🟠', color:'#f26522', glow:'#f2652244',
+    titles:1, winRate:50, avgScore:166, fanBase:85, founded:2013 },
+  { id:'gt',   name:'Gujarat Titans',         abbr:'GT',   logo:'🔵', color:'#1b4876', glow:'#1b487644',
+    titles:1, winRate:58, avgScore:160, fanBase:78, founded:2022 },
+  { id:'lsg',  name:'Lucknow Super Giants',   abbr:'LSG',  logo:'🩵', color:'#00b4d8', glow:'#00b4d844',
+    titles:0, winRate:52, avgScore:161, fanBase:75, founded:2022 },
+];
+
+let picks = [null, null]; // [team1, team2]
+
+function buildGrid(gridEl, sideIndex) {
+  gridEl.innerHTML = '';
+  TEAMS.forEach(team => {
+    const card = document.createElement('div');
+    card.className = 'team-card';
+    card.style.setProperty('--team-color', team.color);
+    card.style.setProperty('--team-glow', team.glow);
+    card.innerHTML = `<span class="logo">${team.logo}</span><span class="abbr" style="color:${team.color}">${team.abbr}</span><span class="name">${team.name.split(' ').slice(-1)[0]}</span>`;
+    card.addEventListener('click', () => selectTeam(sideIndex, team, card, gridEl));
+    gridEl.appendChild(card);
+  });
+}
+
+function selectTeam(sideIndex, team, card, gridEl) {
+  // Deselect previous in same grid
+  gridEl.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  picks[sideIndex] = team;
+  updateDuelBtn();
+}
+
+function updateDuelBtn() {
+  const btn = document.getElementById('duel-btn');
+  btn.disabled = !(picks[0] && picks[1] && picks[0] !== picks[1]);
+}
+
+function runDuel() {
+  const [t1, t2] = picks;
+  if (!t1 || !t2 || t1 === t2) return;
+
+  // Shake animation
+  document.querySelector('.arena').classList.add('shake');
+  setTimeout(() => document.querySelector('.arena').classList.remove('shake'), 400);
+
+  // Compute scores with randomness
+  function score(t) {
+    return t.winRate * 0.4 + t.titles * 2 + t.avgScore * 0.05 + t.fanBase * 0.1 + Math.random() * 15;
+  }
+
+  const s1 = score(t1), s2 = score(t2);
+  const winner = s1 >= s2 ? t1 : t2;
+  const loser  = s1 >= s2 ? t2 : t1;
+
+  const margin = Math.abs(s1 - s2);
+  const resultType = margin < 5 ? 'Nail-biter' : margin < 12 ? 'Solid win' : 'Dominant';
+
+  const quips = {
+    'Nail-biter': [
+      `What a thriller! ${winner.abbr} barely survive!`,
+      `Last ball drama — ${winner.abbr} squeak through!`,
+    ],
+    'Solid win': [
+      `${winner.abbr} show their class and take it home.`,
+      `A convincing effort from ${winner.name}!`,
+    ],
+    'Dominant': [
+      `${winner.abbr} absolutely demolish ${loser.abbr}!`,
+      `No contest — ${winner.name} storm to victory!`,
+    ],
+  };
+  const quip = quips[resultType][Math.floor(Math.random() * 2)];
+
+  // Show result
+  const resultEl = document.getElementById('result');
+  resultEl.classList.add('show');
+  resultEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Matchup display
+  document.getElementById('matchup').innerHTML = `
+    <div class="fighter winner" style="--team-color:${winner.color}">
+      <span class="winner-crown">👑</span>
+      <span class="big-logo">${winner.logo}</span>
+      <div class="fname" style="color:${winner.color}">${winner.abbr}</div>
+      <div class="ftag">${winner.name}</div>
+    </div>
+    <div class="vs-text">vs</div>
+    <div class="fighter loser">
+      <span class="big-logo">${loser.logo}</span>
+      <div class="fname">${loser.abbr}</div>
+      <div class="ftag">${loser.name}</div>
+    </div>
+  `;
+
+  document.getElementById('headline').textContent = quip;
+  document.getElementById('subline').textContent = `${resultType} · ${winner.abbr} take the duel`;
+
+  // Stats
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-box">
+      <span class="val">${winner.titles}</span>
+      <span class="label">IPL Titles</span>
+    </div>
+    <div class="stat-box">
+      <span class="val">${winner.winRate}%</span>
+      <span class="label">Win Rate</span>
+    </div>
+    <div class="stat-box">
+      <span class="val">${winner.avgScore}</span>
+      <span class="label">Avg Score</span>
+    </div>
+  `;
+
+  // Progress bars
+  const metrics = [
+    { label:'Win Rate',  v1: t1.winRate,   v2: t2.winRate,   max: 70 },
+    { label:'Avg Score', v1: t1.avgScore,  v2: t2.avgScore,  max: 190 },
+    { label:'Fan Base',  v1: t1.fanBase,   v2: t2.fanBase,   max: 100 },
+    { label:'Titles',    v1: t1.titles,    v2: t2.titles,    max: 6   },
+  ];
+
+  document.getElementById('progress-bars').innerHTML = metrics.map(m => {
+    const p1 = Math.round((m.v1 / m.max) * 100);
+    const p2 = Math.round((m.v2 / m.max) * 100);
+    return `
+      <div class="pb-row">
+        <span class="pb-val" style="color:${t1.color}">${m.v1}</span>
+        <div>
+          <div style="font-size:0.65rem;color:var(--muted);text-align:center;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px">${m.label}</div>
+          <div class="pb-track">
+            <div class="pb-fill-left"  style="width:${p1}%;background:${t1.color}"></div>
+            <div class="pb-fill-right" style="width:${p2}%;background:${t2.color}"></div>
+          </div>
+        </div>
+        <span class="pb-val" style="color:${t2.color}">${m.v2}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function reset() {
+  picks = [null, null];
+  document.querySelectorAll('.team-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('result').classList.remove('show');
+  updateDuelBtn();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Init
+buildGrid(document.getElementById('grid1'), 0);
+buildGrid(document.getElementById('grid2'), 1);
+document.getElementById('duel-btn').addEventListener('click', runDuel);
+document.getElementById('replay-btn').addEventListener('click', reset);
+</script>
+</body>
+</html>
